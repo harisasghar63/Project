@@ -2,35 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Main title of the dApp -->
     <title>Decentralized Freelance Job Marketplace</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
+        <!-- Header section with wallet connection -->
         <header>
-    <h1>Freelance Job Marketplace dApp</h1>
+            <h1>Freelance Job Marketplace dApp</h1>
             <div class="wallet-section">
                 <button class="btn primary" onclick="connectWallet()">Connect Wallet</button>
-    <p id="wallet-address"></p>
+                <p id="wallet-address"></p>
             </div>
         </header>
 
+        <!-- Job posting section for clients -->
         <section class="post-job-section">
-    <h2>Post a Job</h2>
+            <h2>Post a Job</h2>
             <div class="form-group">
-    <input id="title" type="text" placeholder="Job Title" />
-    <input id="desc" type="text" placeholder="Job Description" />
+                <input id="title" type="text" placeholder="Job Title" />
+                <input id="desc" type="text" placeholder="Job Description" />
                 <input id="budget" type="number" step="0.0001" placeholder="Budget (ETH)" />
                 <button class="btn primary" onclick="postJob()">Post Job</button>
             </div>
         </section>
 
+        <!-- Jobs listing and viewing section -->
         <section class="view-jobs-section">
             <h2>Jobs Marketplace</h2>
+            <!-- Tab navigation for current and completed jobs -->
             <div class="jobs-tabs">
                 <button class="btn tab-btn active" onclick="showJobsByStatus('current')">Current Jobs</button>
                 <button class="btn tab-btn" onclick="showJobsByStatus('completed')">Completed Jobs</button>
             </div>
+            <!-- Job sorting and clearing options -->
             <div class="jobs-actions">
                 <div class="sort-actions">
                     <button class="btn action-btn" onclick="sortJobs('newest')">Newest First</button>
@@ -38,12 +44,15 @@
                 </div>
                 <button class="btn action-btn warning" onclick="clearJobsList()">Clear List</button>
             </div>
+            <!-- Container for current jobs -->
             <div id="currentJobs" class="jobs-list visible">
                 <!-- Current jobs will be listed here -->
             </div>
+            <!-- Container for completed jobs -->
             <div id="completedJobs" class="jobs-list">
                 <!-- Completed jobs will be listed here -->
             </div>
+            <!-- Job details viewer -->
             <div class="form-group job-details-form">
                 <input id="jobId" type="number" placeholder="Enter Job ID" />
                 <button class="btn secondary" onclick="viewJob()">View Job Details</button>
@@ -53,9 +62,11 @@
             </div>
         </section>
 
+        <!-- Job management section for accepting and completing jobs -->
         <section class="manage-jobs-section">
             <h2>Manage Jobs</h2>
             <div class="job-actions">
+                <!-- Accept job card -->
                 <div class="action-card">
                     <h3>Accept Job</h3>
                     <p class="action-description">Freelancers can accept open jobs to start working on them.</p>
@@ -64,6 +75,7 @@
                         <button class="btn secondary" onclick="acceptJob()">Accept Job</button>
                     </div>
                 </div>
+                <!-- Complete job card -->
                 <div class="action-card">
                     <h3>Complete Job</h3>
                     <p class="action-description">Clients can mark jobs as completed once work is done.</p>
@@ -76,9 +88,8 @@
         </section>
     </div>
 
-    <!-- Load Ethers.js from CDN -->
+    <!-- External scripts -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
-    <!-- Your app logic -->
     <script src="app.js"></script>
 </body>
 </html>
