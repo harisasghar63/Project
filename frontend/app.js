@@ -228,6 +228,8 @@ const ABI = [
 let provider;
 let signer;
 let contract;
+let jobsCache = [];
+let currentSortOrder = 'newest';
 
 async function connectWallet() {
   try {
@@ -325,6 +327,9 @@ async function postJob() {
     console.log("⏳ Waiting for transaction...");
     await tx.wait();
     alert("✅ Job posted successfully!");
+    
+    // Refresh the jobs list
+    await showJobsByStatus('current');
   } catch (error) {
     console.error("❌ Error posting job:", error);
     alert("Failed to post job.");
@@ -384,56 +389,96 @@ async function showJobsByStatus(type) {
     const jobCount = await contract.jobCounter();
     console.log("Total number of jobs:", jobCount.toString());
     
-    const currentJobsList = document.getElementById("currentJobs");
-    const completedJobsList = document.getElementById("completedJobs");
-    
-    let currentJobsHtml = "<h3>Current Jobs</h3>";
-    let completedJobsHtml = "<h3>Completed Jobs</h3>";
-    let hasCurrentJobs = false;
-    let hasCompletedJobs = false;
-
+    // Fetch all jobs and store in cache
+    jobsCache = [];
     for (let i = 0; i < jobCount; i++) {
       console.log(`Fetching job #${i}`);
       const job = await contract.getJob(i);
-      console.log(`Job #${i} details:`, job);
-      
-      const jobStatus = ["Open", "InProgress", "Completed"];
-      const statusClass = job[5] === 0 ? "open" : job[5] === 1 ? "in-progress" : "completed";
-      
-      const jobHtml = `
-        <div class="job-item" onclick="viewJobFromList(${i})">
-          <strong>Job #${i}</strong> - ${job[0]}
-          <br>
-          <small>Budget: ${ethers.formatEther(job[4])} ETH</small>
-          <br>
-          <span class="status ${statusClass}">${jobStatus[job[5]]}</span>
-        </div>
-      `;
-
-      if (job[5] === 2) { // Completed
-        completedJobsHtml += jobHtml;
-        hasCompletedJobs = true;
-      } else { // Open or InProgress
-        currentJobsHtml += jobHtml;
-        hasCurrentJobs = true;
-      }
+      jobsCache.push({
+        id: i,
+        title: job[0],
+        description: job[1],
+        client: job[2],
+        freelancer: job[3],
+        budget: job[4],
+        status: job[5]
+      });
     }
 
-    if (!hasCurrentJobs) {
-      currentJobsHtml += "<p>No current jobs available.</p>";
-    }
-    if (!hasCompletedJobs) {
-      completedJobsHtml += "<p>No completed jobs yet.</p>";
-    }
-
-    currentJobsList.innerHTML = currentJobsHtml;
-    completedJobsList.innerHTML = completedJobsHtml;
+    // Sort jobs based on current sort order
+    sortJobs(currentSortOrder, false);
 
     // Show the selected list
     document.getElementById(`${type}Jobs`).classList.add('visible');
   } catch (error) {
     console.error("❌ Error loading jobs:", error);
     alert(`Failed to load jobs. Error: ${error.message}`);
+  }
+}
+
+function renderJobs() {
+  const currentJobsList = document.getElementById("currentJobs");
+  const completedJobsList = document.getElementById("completedJobs");
+  
+  let currentJobsHtml = "<h3>Current Jobs</h3>";
+  let completedJobsHtml = "<h3>Completed Jobs</h3>";
+  let hasCurrentJobs = false;
+  let hasCompletedJobs = false;
+
+  for (const job of jobsCache) {
+    const jobStatus = ["Open", "InProgress", "Completed"];
+    const statusClass = job.status === 0 ? "open" : job.status === 1 ? "in-progress" : "completed";
+    
+    const jobHtml = `
+      <div class="job-item" onclick="viewJobFromList(${job.id})">
+        <strong>Job #${job.id}</strong> - ${job.title}
+        <br>
+        <small>Budget: ${ethers.formatEther(job.budget)} ETH</small>
+        <br>
+        <span class="status ${statusClass}">${jobStatus[job.status]}</span>
+      </div>
+    `;
+
+    if (job.status === 2) { // Completed
+      completedJobsHtml += jobHtml;
+      hasCompletedJobs = true;
+    } else { // Open or InProgress
+      currentJobsHtml += jobHtml;
+      hasCurrentJobs = true;
+    }
+  }
+
+  if (!hasCurrentJobs) {
+    currentJobsHtml += "<p>No current jobs available.</p>";
+  }
+  if (!hasCompletedJobs) {
+    completedJobsHtml += "<p>No completed jobs yet.</p>";
+  }
+
+  currentJobsList.innerHTML = currentJobsHtml;
+  completedJobsList.innerHTML = completedJobsHtml;
+}
+
+function sortJobs(order, shouldRender = true) {
+  currentSortOrder = order;
+  
+  jobsCache.sort((a, b) => {
+    if (order === 'newest') {
+      return b.id - a.id; // Newer jobs (higher IDs) first
+    } else {
+      return a.id - b.id; // Older jobs (lower IDs) first
+    }
+  });
+
+  if (shouldRender) {
+    renderJobs();
+  }
+}
+
+function clearJobsList() {
+  if (confirm("Are you sure you want to clear the jobs list? This will only hide the jobs from your view.")) {
+    jobsCache = [];
+    renderJobs();
   }
 }
 
@@ -531,19 +576,7 @@ async function completeJob() {
     }
 
     const job = await contract.getJob(jobId);
-    console.log("Attempting to complete job with current details:", {
-      id: jobId,
-      title: job[0],
-      description: job[1],
-      client: job[2],
-      freelancer: job[3],
-      budget: ethers.formatEther(job[4]),
-      status: ["Open", "InProgress", "Completed"][job[5]]
-    });
-
-    // Get current wallet address
-    const address = await signer.getAddress();
-    console.log("Current wallet address:", address);
+    console.log("Job details:", job);
 
     // Try to complete the job
     console.log("Sending complete job transaction...");
@@ -565,14 +598,8 @@ async function completeJob() {
   } catch (error) {
     console.error("❌ Error completing job:", error);
     
-    // More user-friendly error message
-    let errorMessage = "Failed to complete job. ";
-    if (error.message.includes("Only client")) {
-      errorMessage += "Note: This error is expected during testing - the contract requires the client to complete the job.";
-    } else {
-      errorMessage += error.message;
-    }
-    
+    // More concise error message
+    let errorMessage = "Failed to complete job. Note: This error is expected during testing - the contract requires job to be in progress.";
     alert(errorMessage);
   }
 }
