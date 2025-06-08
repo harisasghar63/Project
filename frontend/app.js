@@ -240,7 +240,15 @@ async function connectWallet() {
 			
 			// Request account access from user
 			console.log('Requesting account access...');
-			const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+			const accounts = await window.ethereum.request({ 
+				method: 'eth_requestAccounts',
+				params: [] // Explicitly request accounts
+			});
+			
+			if (!accounts || accounts.length === 0) {
+				throw new Error('No accounts found or user rejected the connection');
+			}
+
 			const account = accounts[0];
 			console.log('Connected account:', account);
 
@@ -268,9 +276,14 @@ async function connectWallet() {
 		console.error("❌ Error connecting wallet:", error);
 		if (error.code === 4001) {
 			alert("You rejected the connection request. Please connect your wallet to use this application.");
+		} else if (error.code === -32002) {
+			alert("MetaMask connection request already pending. Please check your MetaMask extension.");
 		} else {
 			alert(`Failed to connect wallet: ${error.message}`);
 		}
+		// Reset wallet connection status
+		document.getElementById("wallet-address").innerText = 'No account connected';
+		document.getElementById("wallet-address").style.color = '#e74c3c';
 	}
 }
 
